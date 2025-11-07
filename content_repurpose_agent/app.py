@@ -15,6 +15,7 @@ from typing import Dict, List
 import streamlit as st
 
 from utils import db
+from utils.auth import authenticate_user, register_user
 from utils.gemini_connector import GeminiConnector
 from utils.input_handler import DEFAULT_MAX_WORDS, prepare_text, preview_text
 from utils.prompt_builder import PromptBuilder
@@ -43,6 +44,9 @@ def _init_session_state() -> None:
         "platform_outputs": {},
         "tone": list(TONES.keys())[0],
         "platforms": [list(PLATFORMS.keys())[0]],
+        "user": None,
+        "auth_mode": "Sign in",
+        "show_profile": False,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -172,19 +176,109 @@ def _render_save_section() -> None:
         if not title.strip():
             st.warning("Add a project title before saving.")
             return
-
-        db.save_to_db(title.strip(), st.session_state["tone"], st.session_state["platform_outputs"])
+        user = st.session_state.get("user")
+        user_id = user["id"] if user else None
+        db.save_to_db(
+            title.strip(),
+            st.session_state["tone"],
+            st.session_state["platform_outputs"],
+            user_id=user_id,
+        )
         st.success("Saved to local database.")
 
     with st.expander("View saved posts"):
-        saved_posts = db.view_saved_posts()
+        user = st.session_state.get("user")
+        saved_posts = db.view_saved_posts(user_id=user["id"] if user else None)
         if not saved_posts:
             st.write("No saved posts yet.")
         else:
-            for post_id, saved_title, saved_tone, platform, timestamp in saved_posts:
+            for row in saved_posts:
                 st.markdown(
-                    f"**#{post_id}** — *{saved_title}* | {saved_tone} | {platform.title()} | {timestamp}"
+                    f"**#{row['id']}** — *{row['title']}* | {row['tone']} | {row['platform'].title()} | {row['timestamp']}"
                 )
+
+def _render_profile_section() -> None:
+    if not st.session_state.get("show_profile"):
+        return
+
+    user = st.session_state.get("user")
+    if not user:
+        st.session_state["show_profile"] = False
+        return
+
+    st.header("Profile")
+    st.markdown(f"**Name:** {user['name']}")
+    st.markdown(f"**Email:** {user['email']}")
+
+    saved_posts = db.view_saved_posts(user_id=user["id"], include_content=False)
+    if saved_posts:
+        st.subheader("Recent Projects")
+        for row in saved_posts:
+            st.markdown(
+                f"- `{row['timestamp']}` — **{row['title']}** ({row['platform'].title()}, {row['tone']})"
+            )
+    else:
+        st.info("No saved posts yet. Generate and save content to see it here.")
+
+    if st.button("Hide Profile", key="hide_profile"):
+        st.session_state["show_profile"] = False
+
+
+def _render_auth_sidebar() -> None:
+    with st.sidebar:
+        st.header("Account")
+        user = st.session_state.get("user")
+
+        if user:
+            st.success(f"Signed in as {user['name']}")
+            if st.button("View Profile", key="profile_button"):
+                st.session_state["show_profile"] = True
+            if st.button("Log out", key="logout_button"):
+                st.session_state["user"] = None
+                st.session_state["show_profile"] = False
+                st.session_state["platform_outputs"] = {}
+                st.session_state["segments"] = []
+                st.rerun()
+            return
+
+        mode = st.radio("", options=["Sign in", "Sign up"], index=0, key="auth_mode_radio")
+        st.session_state["auth_mode"] = mode
+
+        if mode == "Sign in":
+            email = st.text_input("Email", key="login_email")
+            password = st.text_input("Password", type="password", key="login_password")
+            if st.button("Sign in", key="login_submit"):
+                if not email or not password:
+                    st.warning("Enter your email and password.")
+                else:
+                    user = authenticate_user(email=email, password=password)
+                    if not user:
+                        st.error("Invalid credentials. Try again or sign up.")
+                    else:
+                        st.session_state["user"] = user
+                        st.session_state["show_profile"] = False
+                        st.success("Signed in successfully.")
+                        st.rerun()
+        else:
+            name = st.text_input("Name", key="signup_name")
+            email = st.text_input("Email", key="signup_email")
+            password = st.text_input("Password", type="password", key="signup_password")
+            confirm = st.text_input("Confirm Password", type="password", key="signup_confirm")
+            if st.button("Create account", key="signup_submit"):
+                if not all([name.strip(), email.strip(), password, confirm]):
+                    st.warning("Fill in all fields to sign up.")
+                elif password != confirm:
+                    st.warning("Passwords do not match.")
+                else:
+                    try:
+                        user = register_user(name=name.strip(), email=email.strip(), password=password)
+                    except ValueError as exc:
+                        st.error(str(exc))
+                    else:
+                        st.session_state["user"] = user
+                        st.session_state["show_profile"] = False
+                        st.success("Account created and signed in.")
+                        st.rerun()
 
 
 def main() -> None:
@@ -194,6 +288,43 @@ def main() -> None:
     st.caption(
         "Transform long-form articles into ready-to-post social content using Google Gemini."
     )
+
+    with st.container():
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            st.subheader("From long-form to launch-ready in minutes")
+            st.markdown(
+                """
+                Upload or paste your long-form content, pick the tone that matches your brand, and instantly produce
+                polished posts for LinkedIn, Instagram, and YouTube. Edit segments, preview results, and keep your
+                winning copy organized in a personal library.
+                """
+            )
+            st.markdown(
+                """
+                **Workflow overview**
+                - Ingest articles, PDFs, or docs up to 20k words
+                - Segment and refine draft snippets
+                - Choose tone + platforms and generate with Gemini
+                - Edit, save, and revisit projects anytime
+                """
+            )
+        with c2:
+            st.metric("Projects saved", len(db.view_saved_posts(limit=100)))
+            st.metric("Supported platforms", len(PLATFORMS))
+            st.metric("Tone presets", len(TONES))
+
+    st.markdown("---")
+
+    _render_auth_sidebar()
+
+    if not st.session_state.get("user"):
+        st.info(
+            "👋 Welcome! Sign in or create a free account from the left sidebar to unlock segmentation, generation, and saving."
+        )
+        return
+
+    _render_profile_section()
 
     st.header("1. Load Content")
     pasted_text = st.text_area(

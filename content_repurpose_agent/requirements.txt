@@ -6,4 +6,5 @@ PyPDF2
 python-docx
 python-dotenv
 sqlite-utils
+fastapi[standard]
 
