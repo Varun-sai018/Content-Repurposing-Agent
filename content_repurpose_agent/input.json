@@ -1,0 +1,61 @@
+[
+  {
+    "key": "text",
+    "label": "Content Text",
+    "description": "Long-form text content to repurpose (paste or upload)",
+    "type": "string",
+    "required": false,
+    "inputTypes": ["text", "file"]
+  },
+  {
+    "key": "segments",
+    "label": "Content Segments",
+    "description": "Pre-segmented text chunks (optional, overrides automatic segmentation)",
+    "type": "array",
+    "required": false,
+    "inputTypes": ["json"]
+  },
+  {
+    "key": "tone",
+    "label": "Tone",
+    "description": "Writing tone for generated content",
+    "type": "string",
+    "required": true,
+    "inputTypes": ["select"],
+    "options": ["Professional", "Casual", "Promotional"]
+  },
+  {
+    "key": "platforms",
+    "label": "Platforms",
+    "description": "Social media platforms to generate content for",
+    "type": "array",
+    "required": true,
+    "inputTypes": ["multiselect"],
+    "options": ["LinkedIn", "Instagram", "YouTube"]
+  },
+  {
+    "key": "project_title",
+    "label": "Project Title",
+    "description": "Optional title for saving the project",
+    "type": "string",
+    "required": false,
+    "inputTypes": ["text"]
+  },
+  {
+    "key": "save",
+    "label": "Save to Database",
+    "description": "Whether to persist generated content",
+    "type": "boolean",
+    "required": false,
+    "inputTypes": ["checkbox"]
+  },
+  {
+    "key": "question",
+    "label": "Question",
+    "description": "Ask a question for QA-style response (alternative mode)",
+    "type": "string",
+    "required": false,
+    "inputTypes": ["text"]
+  }
+]
+

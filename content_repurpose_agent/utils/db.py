@@ -116,6 +116,27 @@ def view_saved_posts(
         connection.close()
 
 
+def fetch_all_posts(
+    limit: Optional[int] = None,
+    include_content: bool = True,
+    db_path: Path = DB_PATH,
+) -> List[sqlite3.Row]:
+    connection = get_connection(db_path)
+    try:
+        fields = "id, title, tone, platform, timestamp"
+        if include_content:
+            fields += ", content"
+        query = f"SELECT {fields} FROM posts ORDER BY timestamp DESC"
+        params: Tuple = ()
+        if limit is not None:
+            query += " LIMIT ?"
+            params = (limit,)
+        cursor = connection.execute(query, params)
+        return list(cursor.fetchall())
+    finally:
+        connection.close()
+
+
 def get_user_by_email(email: str, db_path: Path = DB_PATH) -> Optional[sqlite3.Row]:
     connection = get_connection(db_path)
     try:
@@ -159,6 +180,7 @@ __all__ = [
     "get_user_by_email",
     "get_user_by_id",
     "insert_user",
+    "fetch_all_posts",
     "DB_PATH",
     "DB_FILENAME",
 ]

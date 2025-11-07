@@ -1,5 +1,6 @@
 streamlit
 google-generativeai>=0.7.0
+google-genai>=0.2.0
 nltk
 sentence-transformers
 PyPDF2
@@ -7,4 +8,6 @@ python-docx
 python-dotenv
 sqlite-utils
 fastapi[standard]
+uvicorn[standard]
+requests
 

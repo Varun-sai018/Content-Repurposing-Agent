@@ -1,0 +1,39 @@
+[
+  {
+    "key": "response",
+    "label": "Answer",
+    "description": "AI-generated answer to the question",
+    "types": ["string", "message"]
+  },
+  {
+    "key": "tone",
+    "label": "Tone",
+    "description": "Selected tone for content generation",
+    "types": ["string"]
+  },
+  {
+    "key": "platforms",
+    "label": "Platforms",
+    "description": "List of selected platforms",
+    "types": ["array", "json"]
+  },
+  {
+    "key": "segment_count",
+    "label": "Segment Count",
+    "description": "Number of content segments processed",
+    "types": ["number", "integer"]
+  },
+  {
+    "key": "outputs",
+    "label": "Generated Outputs",
+    "description": "Platform-specific generated content",
+    "types": ["object", "json"]
+  },
+  {
+    "key": "saved",
+    "label": "Saved",
+    "description": "Whether content was saved to database",
+    "types": ["boolean"]
+  }
+]
+

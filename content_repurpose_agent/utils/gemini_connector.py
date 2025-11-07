@@ -3,19 +3,24 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
 import google.generativeai as genai
 from dotenv import load_dotenv
+
+# Load .env file from project root
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+ENV_FILE = PROJECT_ROOT / ".env"
+load_dotenv(ENV_FILE, override=True)
 
 
 class GeminiConnector:
     """Handle interactions with the Gemini API."""
 
     def __init__(self, model_name: str | None = None) -> None:
-        # Load environment variables from a local .env file if present
-        # override=True ensures we pick up updates made to .env during a running session
-        load_dotenv(override=True)
+        # Ensure .env is loaded (already loaded at module level, but reload to be safe)
+        load_dotenv(ENV_FILE, override=True)
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise EnvironmentError(
